@@ -1,0 +1,3 @@
+recursive-include src/streamlit_label_graph/frontend *
+include README.md
+include LICENSE

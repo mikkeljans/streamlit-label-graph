@@ -1,0 +1,28 @@
+
+#menuContent {
+  position: absolute;
+  z-index: 999;
+  background: rgb(74 74 74);
+  color: #f1f1f1;
+  font-family: 'Source Code Pro';
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 100px;
+  cursor: default;
+}
+
+.menuItem {
+  padding: 5px 10px;
+  border-bottom: 1px solid #787878;
+  font-size: 12px;
+  overflow: hidden;
+}
+.menuItem:hover {
+  background: rgb(43 103 120);
+}
+
+.actionMenuItem {
+  background: #8b5d5d;
+  text-align: end;
+  text-transform: uppercase;
+}
