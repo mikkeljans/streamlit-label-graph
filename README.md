@@ -8,6 +8,11 @@ Plotly graph for labelling timeserie data
 pip install streamlit-label-graph
 ```
 
+## Run demo
+```sh
+python -m streamlit_label_graph
+```
+
 ## Usage instructions
 
 ```python
@@ -25,3 +30,9 @@ df = pd.DataFrame({'date': .., 'temperature': ..})
 figure = px.line(df, x=df['date'], y=df['temperature'])
 labels = label_graph(figure, config)
 # -> [{"key": "..", "category": "HOT", "left": .., "right": ..}, {...}]
+```
+
+* Use Ctrl + Mouse-drag to create a new label
+* Right click on a label to set the category
+
+![Demo](demo_image.png)
