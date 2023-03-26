@@ -21,57 +21,90 @@ function _blockEvents (e) {
 }
 
 const DEFAULT_CATEGORY = {
-  key: '', color: 'rgba(0, 0, 0, 0.1)'
+  key: null, color: 'rgba(0, 0, 0, 0.1)'
 }
 
 class GraphController {
-  constructor (element, config) {
-    this.element = element
-    this.labels = {}
-    this.drawRect = {active: false, start: {x: 0, y: 0}, end: {x: 0, y: 0}}
-    this.config = config
-    this.menu = document.getElementById('contextMenu');
-    this.selection = []
+  constructor () {
+    
   }
 
-  init () {
+  init (labelConfig) {
+    this.element = document.getElementById('graph')
+    this.menu = document.getElementById('contextMenu');
+    this.config = labelConfig
+    this.labels = {}
+    this.drawRect = {active: false, start: {x: 0, y: 0}, end: {x: 0, y: 0}}
+    this.selection = []
+    this.deleted = []
     this.initMenu()
     this.initListeners()
   }
 
-  sendValue () {
-    Streamlit.setComponentValue({
-      labels: this.listLabels()
+  _makeLabel (label) {
+    let key = label.key
+    let x0 = Math.min(label.left, label.right)
+    let x1 = Math.max(label.left, label.right)
+    let version = 0
+    if (this.labels[key]) version = this.labels[key]._version + 1
+    // keep user-input values to make syncing easier
+    return {
+      ...label, key: key, category: label.category, left: x0, right: x1, top: 0, bottom: 0, _version: version
+    }
+  }
+
+  initLabels (labels) {
+    //console.log('INIT LABELS', labels)
+    if (labels == null) return
+    let newLabels = {}
+    labels.map(label => {
+      let version = label._version || 0
+      let current = this.labels[label.key]
+      if (current && (current._version || 0) > version) {
+        newLabels[label.key] = current
+      } else if (label.key && label.left != null && label.right != null) {
+        newLabels[label.key] = label
+      }
     })
+    this.labels = newLabels
+    this.redraw()
+    
+  }
+
+  sendValue () {
+    let data = {
+      labels: this.listLabels(), selection: this.selection.slice(0),
+      deleted: this.deleted.slice(0)
+    }
+    //console.log(' -> ', data)
+    Streamlit.setComponentValue(data)
   }
 
   deleteSelection () {
-    this.selection.map(x => {
-      this.labels[x].deleted = true
-    })
+    this.deleted.push(...this.selection)
     this.redraw()
     this.sendValue()
   }
 
   listLabels () {
-    return Object.values(this.labels).filter(x => !x.deleted)
+    return Object.values(this.labels).filter(x => !this.deleted.includes(x.key))
   }
 
   setSelectionCategory (key) {
     let category = this.config.categories.find(x => x.key == key)
     if (!category) throw new Error('no such category: ' + key)
+    this.selection = this.selection.filter(x => this.labels[x] != null)
     this.selection.map(x => {
       this.labels[x].category = key
+      this.labels[x]._version += 1
     })
     this.redraw()
     this.sendValue()
   }
 
   makeLabel (left, right) {
-    var key = guidGenerator()  
-    this.labels[key] = {
-      key: key, category: '', left: left, right: right, top: 0, bottom: 0
-    }
+    var key = guidGenerator()
+    this.labels[key] = this._makeLabel({key: key, category: DEFAULT_CATEGORY.key, left: left, right: right})
     this.sendValue()
     this.redraw()
     return this.labels[key]
@@ -81,6 +114,7 @@ class GraphController {
     if (!labels) this.selection = []
     else this.selection = labels.map(x => x.key)
     this.redraw()
+    this.sendValue()
   }
 
   labelsAtPoint (coord) {
@@ -200,13 +234,15 @@ class GraphController {
   }
 }
 
-
+const CTRL = new GraphController()
 function onRender(event) {
+  
   if (!window.rendered) {
     let pspec = JSON.parse(event.detail.args.plotly_spec)
     let pconfig = JSON.parse(event.detail.args.plotly_config)
     let labelConfig = JSON.parse(event.detail.args.config)
-    
+    let labels = JSON.parse(event.detail.args.labels)
+
     var elm = document.getElementById('graph')
     elm.style.width = '100%'
     pspec.layout.yaxis = {fixedrange: true}
@@ -214,14 +250,11 @@ function onRender(event) {
     pspec.layout.margin.l = 20
     pspec.layout.margin.r = 20
     
-    Plotly.newPlot(elm, pspec, pconfig).then(attach);
-
-    const ctrl = new GraphController(elm, labelConfig)
-
-    function attach() {
-      ctrl.init()
-    };
-    
+    Plotly.newPlot(elm, pspec, pconfig).then(() => {
+      CTRL.init(labelConfig)
+      CTRL.initLabels(labels)
+      CTRL.sendValue()
+    });
     window.rendered = true
   }
 }

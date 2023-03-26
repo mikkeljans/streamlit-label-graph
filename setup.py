@@ -7,7 +7,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setuptools.setup(
     name="streamlit-label-graph",
-    version="0.1.1",
+    version="0.1.2",
     author="Mikkel Jans",
     author_email="mikkeljans@gmail.com",
     description="Plotly graph for labelling timeserie data",
